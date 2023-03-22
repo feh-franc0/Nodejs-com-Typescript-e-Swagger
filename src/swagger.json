@@ -13,7 +13,7 @@
     {
       "url": "http://localhost:3000/v1",
       "description": "API de test"
-    }, { "url": "http://www.codedrops.com", "description": "API de produção" }
+    }
   ],
   "paths": {
     "/products": {
@@ -54,6 +54,28 @@
                 "schema": {
                   "type": "object",
                   "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/products/all": {
+      "get": {
+        "description": "Busca todos os produto",
+        "summary": "Busca todos os produto",
+        "tags": ["Products"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
                 }
               }
             }
@@ -160,6 +182,38 @@
                 }
               }
             }
+          }
+        }
+      },
+      "delete": {
+        "description": "Deletar um produto pelo id",
+        "summary": "Deletar um produto pelo id",
+        "tags": ["Products"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Id do produto",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT FOUND"
           }
         }
       }

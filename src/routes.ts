@@ -11,7 +11,13 @@ interface ProductsDTO {
   id: string;
 }
 
-const products: ProductsDTO[] = [];
+let products: ProductsDTO[] = [];
+
+
+router.get("/products/all", (request, response) => {
+  const product = products
+  return response.json(product);
+});
 
 router.get("/products/findByName", (request, response) => {
   const { name } = request.query;
@@ -68,6 +74,24 @@ router.put("/products/:id", ensuredAuthenticated, (request, response) => {
   products[productIndex] = product;
 
   return response.json(product);
-})
+});
+
+router.delete("/products/:id", ensuredAuthenticated, (request, response) => { //"/products/:id"
+  
+  const { id } = request.params;  
+  
+  let remainingProducts = products.filter(objeto => objeto.id !== id);
+
+  if(products.length === remainingProducts.length) {
+    return response.status(400).json({ message: "Product has not been removed maybe it does not exist! "});
+  }
+
+  products = remainingProducts
+  
+  console.log(products)
+  return response.json(products)
+  
+
+});
 
 export { router };

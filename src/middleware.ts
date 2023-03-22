@@ -11,6 +11,8 @@ export async function ensuredAuthenticated(
     return response.status(401).send();
   }
 
+  console.log(token)
+
   const [, user] = token.split(" ");
 
   if (user === "admin") {
