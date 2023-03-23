@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { v4 as uuid } from "uuid";
 import { ensuredAuthenticated } from "./middleware";
+import { ProductModel } from "./models/Product"
 
 const router = Router();
 
@@ -11,36 +12,60 @@ interface ProductsDTO {
   id: string;
 }
 
-let products: ProductsDTO[] = [];
-
-
-router.get("/products/all", (request, response) => {
-  const product = products
-  return response.json(product);
+router.get("/products/all", async (request, response) => {
+  const listProducts = await ProductModel.find()
+  return response.json(listProducts);
 });
 
-router.get("/products/findByName", (request, response) => {
+router.get("/products/findByName", async (request, response) => {
   const { name } = request.query;
-  const product = products.filter((p) => p.name.includes(String(name)));
-  return response.json(product);
+
+  try {
+
+    const regex = new RegExp(`^${name}`, 'i');
+
+    const findProductByName = await ProductModel.find({ name: regex })
+
+    if(!findProductByName) {
+      response.status(422).json({ message: 'O Produto não foi encontrado!' })
+      return
+    }
+    
+    response.status(200).json(findProductByName)
+
+  } catch (error) {
+    response.status(500).json({ error: error })
+  }
+
 });
 
-router.get("/products/:id", (request, response) => {
+router.get("/products/:id", async (request, response) => {
   const { id } = request.params;
-  const product = products.find((product) => product.id === id);
-  return response.json(product);
+  
+  try {
+    const findProductById = await ProductModel.findOne({ _id: id })
+
+    if(!findProductById) {
+      response.status(422).json({ message: 'O Produto não foi encontrado!' })
+      return
+    }
+    
+    response.status(200).json(findProductById)
+
+  } catch (error) {
+    response.status(500).json({ error: error })
+  }
+
 });
 
-router.post("/products", ensuredAuthenticated, (request, response) => {
+router.post("/products", ensuredAuthenticated, async (request, response) => {
   const { name, description, price } = request.body;
 
-  const productAlreadyExists = products.find(
-    (product) => product.name === name
-  );
+  if (!name) { response.status(422).json({ error: 'O nome é obrigatório' }); return }
 
-  if (productAlreadyExists) {
-    return response.status(400).json({ message: "Product Already exists! "});
-  }
+  if (!description) { response.status(422).json({ error: 'A descrição é obrigatória' }); return }
+
+  if (!price) { response.status(422).json({ error: 'O preço é obrigatório' }); return }
 
   const product: ProductsDTO = {
     description,
@@ -49,48 +74,65 @@ router.post("/products", ensuredAuthenticated, (request, response) => {
     id: uuid(),
   };
 
-  products.push(product);
+  try {
+    //* criando dados
+    await ProductModel.create(product)
+    
+    response.status(201).json({ message: 'Produto inserido no sistema' })
 
-  return response.json(product);
+  } catch (error) {
+    response.status(500).json({ error: error })
+  }
+
 });
 
-router.put("/products/:id", ensuredAuthenticated, (request, response) => {
+router.put("/products/:id", ensuredAuthenticated, async (request, response) => {
   const { id } = request.params;
   const { name, description, price } = request.body;
 
-  const productIndex = products.findIndex((product) => product.id === id);
-
-  if (productIndex === -1) {
-    return response.status(400).json({ message: "Product doesn't exists!" });
-  }
-
-  const product: ProductsDTO = Object.assign({
-    id,
+  const prod = {
     name,
     description,
-    price,
-  });
-
-  products[productIndex] = product;
-
-  return response.json(product);
-});
-
-router.delete("/products/:id", ensuredAuthenticated, (request, response) => { //"/products/:id"
-  
-  const { id } = request.params;  
-  
-  let remainingProducts = products.filter(objeto => objeto.id !== id);
-
-  if(products.length === remainingProducts.length) {
-    return response.status(400).json({ message: "Product has not been removed maybe it does not exist! "});
+    price
   }
 
-  products = remainingProducts
+  try {
+
+    const updatedProduct = await ProductModel.updateOne({_id: id}, prod)
+
+    if (updatedProduct.matchedCount === 0) {
+      response.status(422).json({ message: 'O Produto não foi encontrado!' })
+      return
+    }
+
+    response.status(200).json(prod)
+    
+  } catch (error) {
+    response.status(500).json({ error: error })
+  }
+
+});
+
+router.delete("/products/:id", ensuredAuthenticated, async (request, response) => { 
   
-  console.log(products)
-  return response.json(products)
+  const { id } = request.params;  
+
+  const prod = await ProductModel.findOne({ _id: id})
   
+  if (!prod) {
+    response.status(422).json({ message: 'O Produto não foi encontrado!' })
+    return
+  }
+
+  try {
+
+    await ProductModel.deleteOne({_id: id})
+
+    response.status(200).json({ message: 'Usuário removido com sucesso!' })
+    
+  } catch (error) {
+    response.status(500).json({ error: error })
+  }
 
 });
 
